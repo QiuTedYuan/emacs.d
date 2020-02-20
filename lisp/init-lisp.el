@@ -164,10 +164,9 @@ there is no current file, eval the current buffer."
   (add-hook 'after-save-hook #'check-parens nil t))
 
 (defvar sanityinc/lispy-modes-hook
-  '(enable-paredit-mode
+  '(;; enable-paredit-mode
     sanityinc/enable-check-parens-on-save)
   "Hook run in all Lisp modes.")
-
 
 (when (maybe-require-package 'aggressive-indent)
   (add-to-list 'sanityinc/lispy-modes-hook 'aggressive-indent-mode))

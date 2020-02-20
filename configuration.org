@@ -1,0 +1,193 @@
+#+TITLE: Emacs Configuration
+#+AUTHOR: Qiu Yuan
+#+EMAIL: yqiuac@cse.ust.hk
+#+OPTIONS: toc:nil num:nil
+
+Some configurations I prefer over [[https://github.com/purcell/emacs.d][Purcell]]'s original settings.
+Could be changed in-place but I decided to use another org file to manage this for consistency.
+Most changes are borrowed from [[https://github.com/hrs/dotfiles/blob/master/emacs/.emacs.d/configuration.org][Harry R. Schwartz]].
+
+* Coding System
+Since I also type Chinese, I prefer UTF-8 Coding.
+#+BEGIN_SRC emacs-lisp
+  (prefer-coding-system 'utf-8)
+  (setenv "LANG" "en_US.UTF-8")
+  (setenv "LC_ALL" "en_US.UTF-8")
+  (setenv "LC_CTYPE" "en_US.UTF-8")
+#+END_SRC
+
+* UI Changes
+** Theme
+I use =monokai-theme= for dark and =one-light= for light.
+Also reimplemented functions to allow some transparency.
+Commented out the dependency on [[file:lisp/init-themes.el][init-themes.el]] to speed up.
+#+BEGIN_SRC emacs-lisp
+  (require-package 'monokai-theme)
+  (require-package 'one-themes)
+
+  ;; load theme without prompting
+  (setq custom-safe-themes t)
+
+  (defun qy/transparency (value)
+    "Sets the transparency of the frame window. 0=transparent/100=opaque."
+    (interactive "nTransparency Value 0 - 100 opaque:")
+    (set-frame-parameter (selected-frame) 'alpha value))
+
+  (defun qy/apply-theme (theme)
+    "Apply the theme and make frames just slightly transparent."
+    (interactive)
+    (load-theme theme t)
+    (qy/transparency 98))
+  (qy/apply-theme 'monokai)
+
+  (defun dark ()
+    "Activate a dark color theme."
+    (interactive)
+    (qy/apply-theme 'monokai))
+  (defun light ()
+    "Activate a light color theme."
+    (interactive)
+    (qy/apply-theme 'one-light))
+
+  ;; Dimming non-active buffers
+  (when (maybe-require-package 'dimmer)
+    (setq-default dimmer-fraction 0.15)
+    (add-hook 'after-init-hook 'dimmer-mode)
+    ;; TODO: file upstream as a PR
+    (after-load 'dimmer
+      (advice-add 'frame-set-background-mode :after (lambda (&rest args) (dimmer-process-all)))))
+#+END_SRC
+Make Sure it also works right under deamon.
+#+BEGIN_SRC emacs-lisp
+  (if (daemonp)
+      (add-hook 'after-make-frame-functions
+                (lambda (frame)
+                  (with-selected-frame frame (qy/apply-theme 'monokai))))
+    (qy/apply-theme 'monokai))
+#+END_SRC
+** Fonts
+   Switched to [[https://fonts.google.com/specimen/Inconsolata][Inconsolata]] for English and Yahei for Chinese.
+   Install the =tft= file first.
+#+BEGIN_SRC emacs-lisp
+  (setq qy/default-font "Inconsolata")
+  (setq qy/chi-font "Microsoft Yahei")
+  (setq qy/default-font-size 14)
+  (setq qy/current-font-size qy/default-font-size)
+
+  (defun qy/font-code ()
+    "Return a string representing the current font (like \"Inconsolata-14\")."
+    (concat qy/default-font "-" (number-to-string qy/current-font-size)))
+
+  (defun qy/set-font-size ()
+    "Set the font to `qy/default-font' at `qy/current-font-size'.
+    Set that for the current frame, and also make it the default for
+    other, future frames."
+    (let ((font-code (qy/font-code)))
+      (if (assoc 'font default-frame-alist)
+          (setcdr (assoc 'font default-frame-alist) font-code)
+        (add-to-list 'default-frame-alist (cons 'font font-code)))
+      (set-frame-font font-code))
+    (set-fontset-font t 'han (font-spec :family qy/chi-font)))
+
+  (defun qy/reset-font-size ()
+    "Change font size back to `qy/default-font-size'."
+    (interactive)
+    (setq qy/current-font-size qy/default-font-size)
+    (qy/set-font-size))
+
+  (qy/reset-font-size)
+#+END_SRC
+The [[file:lisp/init-gui-frames.el::89][original implementation]] changes font sizes using =default-text-scale= package, which I don't feel nice to use. I decide to use implementation by Harry and bind them to =C-M-0/-/==.
+#+BEGIN_SRC emacs-lisp
+  (setq qy/font-change-increment 1.1)
+
+  (defun qy/increase-font-size ()
+    "Increase current font size by a factor of `qy/font-change-increment'."
+    (interactive)
+    (setq qy/current-font-size
+          (ceiling (* qy/current-font-size qy/font-change-increment)))
+    (qy/set-font-size))
+
+    (defun qy/decrease-font-size ()
+      "Decrease current font size by a factor of `qy/font-change-increment', down to a minimum size of 1."
+      (interactive)
+      (setq qy/current-font-size
+            (max 1
+                 (floor (/ qy/current-font-size qy/font-change-increment))))
+      (qy/set-font-size))
+
+    (define-key global-map (kbd "C-M-0") 'qy/reset-font-size)
+    (define-key global-map (kbd "C-M-=") 'qy/increase-font-size)
+    (define-key global-map (kbd "C-M--") 'qy/decrease-font-size)
+#+END_SRC
+Originally this was managed by =default-text-scale= package. I commented that out. Alternatively just run =(remove-hook 'after-init-hook 'default-text-scale-mode)=.
+** Mode Line
+More cute mode line
+#+BEGIN_SRC emacs-lisp
+  (maybe-require-package 'moody)
+  (setq x-underline-at-descent-line t)
+  (moody-replace-mode-line-buffer-identification)
+  (moody-replace-vc-mode)
+#+END_SRC
+
+* Defaults
+  Some defaults that I like.
+** Highlight the current line
+#+BEGIN_SRC emacs-lisp
+  (global-hl-line-mode t)
+#+END_SRC
+
+** Always show line numbebrs
+#+BEGIN_SRC emacs-lisp
+  (global-display-line-numbers-mode t)
+#+END_SRC
+But not in DocView mode
+#+BEGIN_SRC emacs-lisp
+(add-hook 'doc-view-mode-hook (lambda () (display-line-numbers-mode -1)))
+#+END_SRC
+
+** Disable Mouse
+Usually I don't use mouse. Can also be deactivated by =(disable-mouse-mode).=
+#+BEGIN_SRC emacs-lisp
+  (global-disable-mouse-mode)
+#+END_SRC
+
+** Parenthethis
+I don't like [[file:lisp/init-editing-utils.el::7][electric-pair-mode]] or [[file:lisp/init-editing-utils.el::167][paredit]] (in lisp), so I commented those out.
+
+** Recent Files
+Bind =<f4>= to open recent files.
+#+BEGIN_SRC emacs-lisp
+  (global-set-key (kbd "<f4>") 'recentf-open-files)
+#+END_SRC
+
+* Org-Mode
+To insert a code block, use =< s <TAB>=.
+** Initial Screen uses org mode
+#+BEGIN_SRC emacs-lisp
+  (setq initial-major-mode 'org-mode)
+#+END_SRC
+
+** Use bullet points rather than =*=
+#+BEGIN_SRC emacs-lisp
+  (maybe-require-package 'org-bullets)
+  (add-hook 'org-mode-hook 'org-bullets-mode)
+#+END_SRC
+
+** Use =⤵= to replace =...=
+#+BEGIN_SRC emacs-lisp
+  (setq org-ellipsis "⤵")
+#+END_SRC
+
+* Others
+** Undo-tree
+This is usually helpful for me
+#+BEGIN_SRC emacs-lisp
+  (require-package 'undo-tree)
+  (add-hook 'after-init-hook 'global-undo-tree-mode)
+  (after-load 'undo-tree
+    (diminish 'undo-tree-mode))
+#+END_SRC
+Use =C-/= to do normal undo and =C-x u= to get undo-tree, nevigate and =q= to quit.
+** doc-view mode
+Already in official release, but need to insall =gs= to get it work.
