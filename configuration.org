@@ -14,6 +14,8 @@ Since I also type Chinese, I prefer UTF-8 Coding.
   (setenv "LANG" "en_US.UTF-8")
   (setenv "LC_ALL" "en_US.UTF-8")
   (setenv "LC_CTYPE" "en_US.UTF-8")
+  (set-language-environment 'UTF-8)
+  (set-locale-environment "UTF-8")
 #+END_SRC
 
 * UI Changes
