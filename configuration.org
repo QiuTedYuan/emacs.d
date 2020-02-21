@@ -8,13 +8,13 @@ Could be changed in-place but I decided to use another org file to manage this f
 Most changes are borrowed from [[https://github.com/hrs/dotfiles/blob/master/emacs/.emacs.d/configuration.org][Harry R. Schwartz]].
 
 * Coding System
-  Since I also type Chinese, I prefer UTF-8 Coding.
-  #+BEGIN_SRC emacs-lisp
+Since I also type Chinese, I prefer UTF-8 Coding.
+#+BEGIN_SRC emacs-lisp
   (prefer-coding-system 'utf-8)
   (setenv "LANG" "en_US.UTF-8")
   (setenv "LC_ALL" "en_US.UTF-8")
   (setenv "LC_CTYPE" "en_US.UTF-8")
-  #+END_SRC
+#+END_SRC
 
 * UI Changes
 ** Theme
@@ -124,7 +124,7 @@ Most changes are borrowed from [[https://github.com/hrs/dotfiles/blob/master/ema
 ** Mode Line
    More cute mode line
    #+BEGIN_SRC emacs-lisp
-  (maybe-require-package 'moody)
+  (require 'moody)
   (setq x-underline-at-descent-line t)
   (moody-replace-mode-line-buffer-identification)
   (moody-replace-vc-mode)
@@ -141,9 +141,10 @@ Most changes are borrowed from [[https://github.com/hrs/dotfiles/blob/master/ema
    #+BEGIN_SRC emacs-lisp
   (global-display-line-numbers-mode t)
    #+END_SRC
-   But not in DocView mode
+   Except when it should not
    #+BEGIN_SRC emacs-lisp
-(add-hook 'doc-view-mode-hook (lambda () (display-line-numbers-mode -1)))
+     (add-hook 'doc-view-mode-hook (lambda () (display-line-numbers-mode -1)))
+     (add-hook 'w3m-mode-hook (lambda () (display-line-numbers-mode -1)))
    #+END_SRC
 
 ** Disable Mouse
@@ -153,8 +154,7 @@ Most changes are borrowed from [[https://github.com/hrs/dotfiles/blob/master/ema
    #+END_SRC
 
 ** Parenthethis
-   I don't like [[file:lisp/init-editing-utils.el::7][electric-pair-mode]] or [[file:lisp/init-editing-utils.el::167][paredit]] (in lisp), so I commented those out.
-
+   I don't like [[file:lisp/init-editing-utils.el::7][electric-pair-mode]] or [[file:init.el::116][paredit]], so I commented those out.
 ** Recent Files
    Bind =<f4>= to open recent files.
    #+BEGIN_SRC emacs-lisp
@@ -180,13 +180,14 @@ Most changes are borrowed from [[https://github.com/hrs/dotfiles/blob/master/ema
    #+END_SRC
 
 ** Truncate Lines
-   Use soft wraps to tuncate lines.
+   By default =org= does truncates lines. But currently I feel soft wraps are better.
    #+BEGIN_SRC emacs-lisp
-   (set-default 'truncate-lines nil)
+   (setq org-startup-truncated nil)
    #+END_SRC
+
 * Functions
 ** Indent Buffer
-   Emacs implemented =indent-region= to indent marked parts. When nothing is marked I usually want to indent everything.
+Emacs implemented =indent-region= to indent marked parts. When nothing is marked I usually want to indent everything.
    #+BEGIN_SRC emacs-lisp
      (defun indent-buffer()
        (interactive)
@@ -205,6 +206,7 @@ Most changes are borrowed from [[https://github.com/hrs/dotfiles/blob/master/ema
 
      (global-set-key (kbd "C-M-\\") 'indent-region-or-buffer)
    #+END_SRC
+
 * Others
 ** Undo-tree
    This is usually helpful for me.
